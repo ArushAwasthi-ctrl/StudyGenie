@@ -7,8 +7,6 @@ dist/
 *.tsbuildinfo
 
 # Documentation (local only)
+docs/
 Build-Guide.md
-Flagship-Project-Plan.md
-Flagship-Project-Spec.md
-Interview-Prep.md
 CLAUDE.md

@@ -1,5 +1,6 @@
 import { Outlet, Navigate } from "react-router";
 import { useAuth } from "../../hooks/useAuth.js";
+import { Skeleton } from "@/components/ui/skeleton";
 import Sidebar from "./Sidebar.js";
 import Navbar from "./Navbar.js";
 
@@ -8,8 +9,12 @@ export default function Layout() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="space-y-4 w-64">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
       </div>
     );
   }
@@ -19,7 +24,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Navbar />

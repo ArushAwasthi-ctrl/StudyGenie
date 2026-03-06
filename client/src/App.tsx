@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router";
 import Layout from "./components/layout/Layout.js";
+import HomePage from "./pages/HomePage.js";
 import LoginPage from "./pages/LoginPage.js";
 import RegisterPage from "./pages/RegisterPage.js";
 import ChatPage from "./pages/ChatPage.js";
@@ -12,6 +13,7 @@ export default function App() {
   return (
     <Routes>
       {/* Public routes */}
+      <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
@@ -25,7 +27,7 @@ export default function App() {
       </Route>
 
       {/* Default redirect */}
-      <Route path="*" element={<Navigate to="/chat" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
