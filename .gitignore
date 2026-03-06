@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+.vscode/
+*.tsbuildinfo
+
+# Documentation (local only)
+Build-Guide.md
+Flagship-Project-Plan.md
+Flagship-Project-Spec.md
+Interview-Prep.md
+CLAUDE.md
