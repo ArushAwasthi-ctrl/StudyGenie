@@ -6,7 +6,7 @@ import RegisterPage from "./pages/RegisterPage.js";
 import ChatPage from "./pages/ChatPage.js";
 import DocumentsPage from "./pages/DocumentsPage.js";
 import QuizPage from "./pages/QuizPage.js";
-import CodeReviewPage from "./pages/CodeReviewPage.js";
+import InterviewPage from "./pages/InterviewPage.js";
 import DashboardPage from "./pages/DashboardPage.js";
 
 export default function App() {
@@ -22,7 +22,7 @@ export default function App() {
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/documents" element={<DocumentsPage />} />
         <Route path="/quiz" element={<QuizPage />} />
-        <Route path="/code-review" element={<CodeReviewPage />} />
+        <Route path="/interview" element={<InterviewPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
       </Route>
 

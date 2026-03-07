@@ -3,7 +3,7 @@ import {
   MessageSquare,
   FileText,
   HelpCircle,
-  Code2,
+  Mic,
   LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,7 @@ const navItems = [
   { to: "/chat", label: "Chat", icon: MessageSquare },
   { to: "/documents", label: "Documents", icon: FileText },
   { to: "/quiz", label: "Quiz", icon: HelpCircle },
-  { to: "/code-review", label: "Code Review", icon: Code2 },
+  { to: "/interview", label: "Mock Interview", icon: Mic },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ];
 

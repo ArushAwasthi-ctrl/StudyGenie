@@ -11,7 +11,7 @@ import authRoutes from "./routes/auth.routes.js";
 import documentRoutes from "./routes/document.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
 import quizRoutes from "./routes/quiz.routes.js";
-import codeReviewRoutes from "./routes/codeReview.routes.js";
+import interviewRoutes from "./routes/interview.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 
@@ -33,7 +33,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/quiz", quizRoutes);
-app.use("/api/code-review", codeReviewRoutes);
+app.use("/api/interview", interviewRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin", adminRoutes);
 

@@ -41,7 +41,7 @@
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
+    --background: oklch(0.13 0.015 265);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);
     --card-foreground: oklch(0.985 0 0);
@@ -114,6 +114,23 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Mesh gradient animations for landing page */
+@keyframes mesh-drift-1 {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  33% { transform: translate(8%, 12%) scale(1.05); }
+  66% { transform: translate(-5%, 8%) scale(0.97); }
+}
+@keyframes mesh-drift-2 {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  33% { transform: translate(-12%, -8%) scale(1.03); }
+  66% { transform: translate(6%, -12%) scale(0.96); }
+}
+@keyframes mesh-drift-3 {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  33% { transform: translate(10%, -6%) scale(0.98); }
+  66% { transform: translate(-8%, 10%) scale(1.04); }
 }
 
 @layer base {
