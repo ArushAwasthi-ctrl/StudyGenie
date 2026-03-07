@@ -5,6 +5,7 @@ import {
   HelpCircle,
   Mic,
   LayoutDashboard,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ const navItems = [
   { to: "/quiz", label: "Quiz", icon: HelpCircle },
   { to: "/interview", label: "Mock Interview", icon: Mic },
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/pricing", label: "Pricing", icon: CreditCard },
 ];
 
 export default function Sidebar() {

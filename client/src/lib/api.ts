@@ -1,42 +1,27 @@
-import { getToken, clearTokens, refreshAccessToken } from "./auth.js";
-
-const API_BASE = "/api";
-
-interface FetchOptions extends RequestInit {
-  skipAuth?: boolean;
-}
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : "/api";
 
 export async function api<T = unknown>(
   endpoint: string,
-  options: FetchOptions = {}
+  options: RequestInit = {}
 ): Promise<T> {
-  const { skipAuth = false, headers: customHeaders, ...rest } = options;
+  const { headers: customHeaders, ...rest } = options;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(customHeaders as Record<string, string>),
   };
 
-  if (!skipAuth) {
-    const token = getToken();
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-  }
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    headers,
+    credentials: "include",
+    ...rest,
+  });
 
-  let res = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
-
-  // If 401 and we have a token, try refreshing
-  if (res.status === 401 && !skipAuth) {
-    const refreshed = await refreshAccessToken();
-    if (refreshed) {
-      headers["Authorization"] = `Bearer ${getToken()}`;
-      res = await fetch(`${API_BASE}${endpoint}`, { headers, ...rest });
-    } else {
-      clearTokens();
-      window.location.href = "/login";
-      throw new Error("Session expired");
-    }
+  if (res.status === 401) {
+    window.location.href = "/login";
+    throw new Error("Session expired");
   }
 
   if (!res.ok) {
@@ -51,13 +36,9 @@ export async function apiUpload<T = unknown>(
   endpoint: string,
   formData: FormData
 ): Promise<T> {
-  const token = getToken();
-  const headers: Record<string, string> = {};
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-
   const res = await fetch(`${API_BASE}${endpoint}`, {
     method: "POST",
-    headers,
+    credentials: "include",
     body: formData,
   });
 

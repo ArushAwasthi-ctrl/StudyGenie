@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useCallback, type ReactNode } from "react";
 import { createElement } from "react";
-import { setTokens, clearTokens, getToken } from "../lib/auth.js";
-import { api } from "../lib/api.js";
+import { authClient } from "../lib/auth-client.js";
 
 interface User {
   id: string;
@@ -21,50 +20,28 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: session, isPending } = authClient.useSession();
 
-  useEffect(() => {
-    const token = getToken();
-    if (token) {
-      api<{ user: User }>("/auth/me")
-        .then((data) => setUser(data.user))
-        .catch(() => clearTokens())
-        .finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
+  const user: User | null = session?.user
+    ? { id: session.user.id, name: session.user.name, email: session.user.email }
+    : null;
+
+  const login = useCallback(async (email: string, password: string) => {
+    const result = await authClient.signIn.email({ email, password });
+    if (result.error) {
+      throw new Error(result.error.message || "Login failed");
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const data = await api<{ accessToken: string; refreshToken: string; user: User }>(
-      "/auth/login",
-      {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-        skipAuth: true,
-      }
-    );
-    setTokens(data.accessToken, data.refreshToken);
-    setUser(data.user);
-  }, []);
-
   const register = useCallback(async (name: string, email: string, password: string) => {
-    const data = await api<{ accessToken: string; refreshToken: string; user: User }>(
-      "/auth/register",
-      {
-        method: "POST",
-        body: JSON.stringify({ name, email, password }),
-        skipAuth: true,
-      }
-    );
-    setTokens(data.accessToken, data.refreshToken);
-    setUser(data.user);
+    const result = await authClient.signUp.email({ name, email, password });
+    if (result.error) {
+      throw new Error(result.error.message || "Registration failed");
+    }
   }, []);
 
-  const logout = useCallback(() => {
-    clearTokens();
-    setUser(null);
+  const logout = useCallback(async () => {
+    await authClient.signOut();
   }, []);
 
   return createElement(
@@ -73,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value: {
         user,
         isAuthenticated: !!user,
-        isLoading,
+        isLoading: isPending,
         login,
         register,
         logout,

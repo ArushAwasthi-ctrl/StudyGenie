@@ -2,18 +2,20 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { toNodeHandler } from "better-auth/node";
 
 import { connectDB } from "./config/db.js";
 import { getRedis } from "./config/redis.js";
 import { verifyQdrant } from "./config/qdrant.js";
+import { auth } from "./config/auth.js";
 
-import authRoutes from "./routes/auth.routes.js";
 import documentRoutes from "./routes/document.routes.js";
 import chatRoutes from "./routes/chat.routes.js";
 import quizRoutes from "./routes/quiz.routes.js";
 import interviewRoutes from "./routes/interview.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import polarRoutes from "./routes/polar.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,14 +30,17 @@ app.use(cors({
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
+// Better Auth — handles /api/auth/* (sign-up, sign-in, session, etc.)
+app.all("/api/auth/*splat", toNodeHandler(auth));
+
 // Routes
-app.use("/api/auth", authRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/interview", interviewRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/polar", polarRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

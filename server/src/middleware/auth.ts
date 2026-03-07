@@ -1,12 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { fromNodeHeaders } from "better-auth/node";
+import { auth } from "../config/auth.js";
 
-export interface AuthPayload {
-  userId: string;
-  email: string;
-}
-
-// Extend Express Request to include userId
+// Extend Express Request to include user session data
 declare global {
   namespace Express {
     interface Request {
@@ -16,42 +12,21 @@ declare global {
   }
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "No token provided" });
-    return;
-  }
-
-  const token = authHeader.split(" ")[1];
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    res.status(500).json({ error: "JWT_SECRET not configured" });
-    return;
-  }
-
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const payload = jwt.verify(token, secret) as AuthPayload;
-    req.userId = payload.userId;
-    req.userEmail = payload.email;
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
+
+    if (!session) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    req.userId = session.user.id;
+    req.userEmail = session.user.email;
     next();
   } catch {
-    res.status(401).json({ error: "Invalid or expired token" });
+    res.status(401).json({ error: "Invalid session" });
   }
-}
-
-export function generateTokens(userId: string, email: string) {
-  const accessToken = jwt.sign(
-    { userId, email },
-    process.env.JWT_SECRET!,
-    { expiresIn: process.env.JWT_EXPIRY || "15m" } as jwt.SignOptions
-  );
-
-  const refreshToken = jwt.sign(
-    { userId, email },
-    process.env.JWT_REFRESH_SECRET!,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRY || "7d" } as jwt.SignOptions
-  );
-
-  return { accessToken, refreshToken };
 }
