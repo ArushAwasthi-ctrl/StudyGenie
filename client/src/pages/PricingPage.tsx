@@ -4,6 +4,7 @@ import { Check, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 const plans = [
   {
@@ -57,7 +58,7 @@ export default function PricingPage() {
       });
       window.location.href = data.checkoutUrl;
     } catch (error) {
-      console.error("Checkout error:", error);
+      toast.error("Checkout failed. Please try again.");
     } finally {
       setLoading(null);
     }

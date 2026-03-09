@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useDocuments, type Document } from "@/hooks/useDocuments";
+import { toast } from "sonner";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -63,8 +64,9 @@ export default function DocumentsPage() {
     for (const file of Array.from(files)) {
       try {
         await uploadDocument(file);
+        toast.success(`Uploaded "${file.name}"`);
       } catch {
-        // Error handled in hook
+        toast.error(`Failed to upload "${file.name}"`);
       }
     }
   };
@@ -79,6 +81,9 @@ export default function DocumentsPage() {
     setDeletingId(id);
     try {
       await deleteDocument(id);
+      toast.success("Document deleted");
+    } catch {
+      toast.error("Failed to delete document");
     } finally {
       setDeletingId(null);
     }
