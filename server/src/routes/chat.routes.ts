@@ -8,6 +8,7 @@ const router = Router();
 
 // POST /api/chat — Streaming RAG chat
 router.post("/", authenticate, async (req: Request, res: Response) => {
+  console.log("[Chat] Request received:", { userId: req.userId, body: req.body });
   try {
     const parsed = chatMessageSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -27,13 +28,16 @@ router.post("/", authenticate, async (req: Request, res: Response) => {
     // Set headers for streaming + metadata
     res.setHeader("x-conversation-id", result.conversationId);
     res.setHeader("x-trace-id", result.traceId);
-    res.setHeader("x-sources", JSON.stringify(result.sources));
+    // Encode sources as base64 to avoid invalid header characters
+    res.setHeader("x-sources", Buffer.from(JSON.stringify(result.sources)).toString("base64"));
 
     // Pipe the AI SDK stream to the response
     result.stream.pipeDataStreamToResponse(res);
   } catch (error) {
-    console.error("Chat error:", error);
-    res.status(500).json({ error: "Failed to process chat message" });
+    console.error("Chat error:", error instanceof Error ? error.stack : error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to process chat message" });
+    }
   }
 });
 

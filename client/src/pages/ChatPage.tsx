@@ -100,7 +100,7 @@ export default function ChatPage() {
       let sources: Source[] = [];
       try {
         const sourcesHeader = res.headers.get("x-sources");
-        if (sourcesHeader) sources = JSON.parse(sourcesHeader);
+        if (sourcesHeader) sources = JSON.parse(atob(sourcesHeader));
       } catch {
         // ignore parse errors
       }

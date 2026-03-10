@@ -92,7 +92,7 @@ ${contextBlock}
   //   - LLM returns JSON, SDK validates against Zod
   //   - If validation fails, SDK retries with error feedback
   const { object: quiz } = await generateObject({
-    model: getModel("gemini"), // Gemini handles structured output better for quiz generation
+    model: getModel("groq"), // Gemini handles structured output better for quiz generation
     schema: QuizSchema,
     prompt: systemPrompt,
   });
@@ -153,7 +153,8 @@ export async function evaluateQuiz(
   const qaBlock = quizResult.questions
     .map((q) => {
       const studentAnswer = answers.find((a) => a.questionId === q.id);
-      return `Question (${q.type}, ${q.difficulty}): ${q.question}
+      return `Question ID: ${q.id}
+Question (${q.type}, ${q.difficulty}): ${q.question}
 Topic: ${q.topic}
 Correct Answer: ${q.correctAnswer}
 Student Answer: ${studentAnswer?.answer || "[NO ANSWER]"}
@@ -178,6 +179,7 @@ Scoring rules:
 6. Calculate overallScore as percentage: (sum of scores) / (totalQuestions * 5) * 100
 7. Identify weak topics (scored < 3) and strong topics (scored >= 4)
 8. Provide actionable overall feedback
+9. Use the EXACT questionId values provided (e.g., q1, q2, q3) — do NOT invent new IDs
 
 Student's answers:
 ---
@@ -186,21 +188,26 @@ ${qaBlock}
 
   // 3. LLM-as-judge — second generateObject() call for evaluation
   const { object: evaluation } = await generateObject({
-    model: getModel("gemini"),
+    model: getModel("groq"),
     schema: QuizEvaluationSchema,
     prompt: systemPrompt,
   });
 
   // 4. Update quiz result in MongoDB
-  quizResult.answers = evaluation.evaluations.map((e) => ({
-    questionId: e.questionId,
-    userAnswer: answers.find((a) => a.questionId === e.questionId)?.answer || "",
-    isCorrect: e.isCorrect,
-    score: e.score,
-    feedback: e.feedback,
-    keyPointsCovered: e.keyPointsCovered,
-    keyPointsMissed: e.keyPointsMissed,
-  }));
+  // Map by index (not questionId) because the LLM may generate different questionId formats
+  quizResult.answers = quizResult.questions.map((q, i) => {
+    const evalItem = evaluation.evaluations.find((e) => e.questionId === q.id) || evaluation.evaluations[i];
+    const studentAnswer = answers.find((a) => a.questionId === q.id)?.answer || "[NO ANSWER]";
+    return {
+      questionId: q.id,
+      userAnswer: studentAnswer,
+      isCorrect: evalItem?.isCorrect ?? false,
+      score: evalItem?.score ?? 0,
+      feedback: evalItem?.feedback ?? "No feedback available",
+      keyPointsCovered: evalItem?.keyPointsCovered ?? [],
+      keyPointsMissed: evalItem?.keyPointsMissed ?? [],
+    };
+  });
   quizResult.overallScore = evaluation.overallScore;
   quizResult.totalCorrect = evaluation.totalCorrect;
   quizResult.weakTopics = evaluation.weakTopics;

@@ -11,7 +11,7 @@ export const uploadDocumentSchema = z.object({
 export const chatMessageSchema = z.object({
   message: z.string().min(1, "Message cannot be empty").max(4000, "Message too long"),
   documentIds: z.array(z.string()).min(1, "Select at least one document"),
-  conversationId: z.string().optional(),
+  conversationId: z.string().nullable().optional().transform((val) => val ?? undefined),
 });
 
 export type ChatMessageInput = z.infer<typeof chatMessageSchema>;

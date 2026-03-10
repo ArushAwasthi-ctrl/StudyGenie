@@ -49,6 +49,7 @@ export function rateLimit(type: keyof typeof RATE_LIMITS) {
 
     try {
       const redis = getRedis();
+      if (!redis) { next(); return; }
       const windowId = Math.floor(Date.now() / config.windowMs);
       const key = `ratelimit:${req.userId}:${config.keyPrefix}:${windowId}`;
 

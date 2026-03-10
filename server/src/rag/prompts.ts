@@ -37,10 +37,12 @@ export function buildRAGSystemPrompt(chunks: RetrievedChunk[]): string {
 Rules:
 1. Only use information from the context below
 2. If the context doesn't contain the answer, say "I don't have enough information in the uploaded documents to answer this question."
-3. Cite your sources using [Source: filename, Chunk #index] at the end of relevant statements
+3. Cite your sources using [Source: filename] at the end of your answer — NOT inline
 4. Be concise but thorough
 5. If the user asks about something not in the documents, redirect them to upload relevant materials
 6. Use markdown formatting for readability (headings, lists, bold for key terms)
+7. NEVER include raw chunk text, chunk numbers, relevance scores, or metadata in your response — synthesize the information naturally
+8. Do NOT quote the context verbatim — rephrase and explain in your own words
 
 Context:
 ---

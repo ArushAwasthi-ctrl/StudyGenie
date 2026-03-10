@@ -2,11 +2,14 @@ import { Redis } from "ioredis";
 
 let redis: Redis | null = null;
 
-export function getRedis(): Redis {
+export function getRedis(): Redis | null {
   if (redis) return redis;
 
   const url = process.env.REDIS_URL;
-  if (!url) throw new Error("REDIS_URL is not defined in environment");
+  if (!url) {
+    console.warn("REDIS_URL not set — rate limiting disabled");
+    return null;
+  }
 
   redis = new Redis(url, {
     maxRetriesPerRequest: 3,

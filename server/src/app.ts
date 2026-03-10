@@ -24,11 +24,17 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: process.env.NODE_ENV === "production"
     ? process.env.CLIENT_URL
-    : "http://localhost:5173",
+    : ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],
   credentials: true,
 }));
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+
+// Request logger (debug)
+app.use((req, _res, next) => {
+  console.log(`[REQ] ${req.method} ${req.path}`);
+  next();
+});
 
 // Better Auth — handles /api/auth/* (sign-up, sign-in, session, etc.)
 app.all("/api/auth/*splat", toNodeHandler(auth));
@@ -57,7 +63,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 async function start() {
   try {
     await connectDB();
-    getRedis();
+    getRedis(); // Returns null if REDIS_URL not set (rate limiting disabled)
     await verifyQdrant();
 
     app.listen(PORT, () => {

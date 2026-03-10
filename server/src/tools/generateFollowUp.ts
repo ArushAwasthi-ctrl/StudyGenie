@@ -44,7 +44,7 @@ export const generateFollowUpTool = tool({
   }),
   execute: async ({ previousQuestion, missedPoints, difficulty }) => {
     const { object } = await generateObject({
-      model: getModel("gemini"),
+      model: getModel("groq"),
       schema: FollowUpOutputSchema,
       prompt: `You are a technical interviewer following up on a weak answer.
 

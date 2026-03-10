@@ -15,8 +15,10 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = ["application/pdf", "text/plain", "text/markdown"];
-    if (allowed.includes(file.mimetype)) {
+    const allowedMimes = ["application/pdf", "text/plain", "text/markdown", "text/x-markdown", "application/octet-stream"];
+    const allowedExts = [".pdf", ".txt", ".md"];
+    const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf("."));
+    if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
       cb(null, true);
     } else {
       cb(new Error("Only PDF, TXT, and MD files are supported"));
@@ -41,12 +43,36 @@ async function ensureCollection(userId: string): Promise<void> {
     await qdrant.createCollection(name, {
       vectors: { size: 3072, distance: "Cosine" },
     });
+    // Index documentId for filtered search (required by Qdrant Cloud strict mode)
+    await qdrant.createPayloadIndex(name, {
+      field_name: "documentId",
+      field_schema: "keyword",
+    });
     console.log(`Created Qdrant collection: ${name}`);
   }
 }
 
+// Multer error handler wrapper
+function handleUpload(req: Request, res: Response, next: () => void) {
+  upload.single("file")(req, res, (err: unknown) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        res.status(400).json({ error: "File too large. Maximum size is 10MB." });
+        return;
+      }
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    if (err instanceof Error) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    next();
+  });
+}
+
 // POST /api/documents/upload — Upload and process a document
-router.post("/upload", authenticate, upload.single("file"), async (req: Request, res: Response) => {
+router.post("/upload", authenticate, handleUpload, async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: "No file provided" });

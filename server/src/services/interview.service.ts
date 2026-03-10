@@ -66,7 +66,7 @@ export async function startSession(
 
   // 2. Generate first question
   const { object: questionData } = await generateObject({
-    model: getModel("gemini"),
+    model: getModel("groq"),
     schema: questionOutputSchema,
     prompt: `You are a technical interviewer. Generate the FIRST interview question for a session.
 
@@ -152,7 +152,7 @@ export async function submitAnswer(
 
   // 2. Evaluate the answer (LLM-as-judge)
   const { object: evaluation } = await generateObject({
-    model: getModel("gemini"),
+    model: getModel("groq"),
     schema: InterviewAnswerEvalSchema,
     prompt: `You are evaluating an interview answer. Be fair but rigorous.
 
@@ -322,7 +322,7 @@ async function generateFollowUpQuestion(
   difficulty: "easy" | "medium" | "hard"
 ) {
   const { object } = await generateObject({
-    model: getModel("gemini"),
+    model: getModel("groq"),
     schema: questionWithHintSchema,
     prompt: `You are a technical interviewer following up on a weak answer.
 
@@ -365,7 +365,7 @@ async function generateNextQuestion(
     : "";
 
   const { object } = await generateObject({
-    model: getModel("gemini"),
+    model: getModel("groq"),
     schema: questionOutputSchema,
     prompt: `You are a technical interviewer. Generate the NEXT interview question.
 
@@ -405,7 +405,7 @@ async function generateSessionReport(
     .join("\n\n");
 
   const { object } = await generateObject({
-    model: getModel("gemini"),
+    model: getModel("groq"),
     schema: InterviewResultSchema,
     prompt: `You are an interview evaluator. Produce a comprehensive session report.
 

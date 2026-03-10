@@ -36,7 +36,7 @@ export const evaluateAnswerTool = tool({
   }),
   execute: async ({ question, userAnswer, expectedKeyPoints }) => {
     const { object } = await generateObject({
-      model: getModel("gemini"),
+      model: getModel("groq"),
       schema: InterviewAnswerEvalSchema,
       prompt: `You are evaluating an interview answer. Be fair but rigorous.
 

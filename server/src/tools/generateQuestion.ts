@@ -50,7 +50,7 @@ export const generateQuestionTool = tool({
         : "";
 
     const { object } = await generateObject({
-      model: getModel("gemini"),
+      model: getModel("groq"),
       schema: QuestionOutputSchema,
       prompt: `You are a technical interviewer. Generate ONE interview question.
 
