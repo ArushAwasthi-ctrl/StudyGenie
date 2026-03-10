@@ -231,24 +231,7 @@ npm run dev
 
 ---
 
-## What I Built vs Boilerplate
-
-| I Wrote (interview-critical) | Claude Helped (scaffolding) |
-|-------------------------------|----------------------------|
-| Recursive chunking algorithm | Express setup, route mounting |
-| RAG prompt templates with citation rules | Mongoose schema definitions |
-| Cosine similarity from scratch | React component structure |
-| Semantic cache logic | shadcn/ui setup + styling |
-| Circuit breaker state machine | Tailwind + Motion animations |
-| Agent tool orchestration | Better Auth config |
-| Retrieval + relevance filtering | Package configs |
-| Guardrail detection patterns | Dashboard layout |
-
----
-
-## Built With
-
-Built as part of a 10-week GenAI learning pathway. Each feature maps to a core concept:
+## Core Concepts Implemented
 
 | Concept | Feature |
 |---------|---------|
