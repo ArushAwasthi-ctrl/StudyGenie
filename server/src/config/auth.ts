@@ -19,12 +19,10 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    crossSubDomainCookies: {
-      enabled: process.env.NODE_ENV === "production",
-    },
     defaultCookieAttributes: {
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      path: "/",
     },
   },
   trustedOrigins: [
