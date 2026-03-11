@@ -1,6 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : "/api";
+const API_BASE = import.meta.env.PROD
+  ? "/api"
+  : (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api");
 
 export async function api<T = unknown>(
   endpoint: string,

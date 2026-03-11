@@ -30,9 +30,9 @@ interface Message {
   sources?: Source[];
 }
 
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : "/api";
+const API_BASE = import.meta.env.PROD
+  ? "/api"
+  : (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api");
 
 export default function ChatPage() {
   const { documents, isLoading: docsLoading } = useDocuments();
