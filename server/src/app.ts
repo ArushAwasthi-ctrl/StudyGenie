@@ -48,6 +48,11 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/polar", polarRoutes);
 
+// Root route
+app.get("/", (_req, res) => {
+  res.json({ name: "StudyGenie API", status: "ok", timestamp: new Date().toISOString() });
+});
+
 // Health check
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
