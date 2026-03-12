@@ -30,7 +30,6 @@ const documentSchema = new mongoose.Schema<IDocument>({
   mimeType: {
     type: String,
     required: true,
-    enum: ["application/pdf", "text/plain", "text/markdown"],
   },
   originalSize: {
     type: Number,
