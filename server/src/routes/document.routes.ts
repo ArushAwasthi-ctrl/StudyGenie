@@ -15,10 +15,9 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowedMimes = ["application/pdf", "text/plain", "text/markdown", "text/x-markdown", "application/octet-stream"];
-    const allowedExts = [".pdf", ".txt", ".md"];
     const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf("."));
-    if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
+    const allowedExts = [".pdf", ".txt", ".md"];
+    if (allowedExts.includes(ext)) {
       cb(null, true);
     } else {
       cb(new Error("Only PDF, TXT, and MD files are supported"));
@@ -82,9 +81,10 @@ router.post("/upload", authenticate, handleUpload, async (req: Request, res: Res
     const userId = req.userId!;
     const file = req.file;
 
-    // Extract text based on file type
+    // Extract text based on file extension (MIME types vary across devices)
     let textContent: string;
-    if (file.mimetype === "application/pdf") {
+    const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf("."));
+    if (ext === ".pdf") {
       const pdfData = await pdfParse(file.buffer);
       textContent = pdfData.text;
     } else {
