@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
+import { createDataStreamResponse } from "ai";
 import { authenticate } from "../middleware/auth.js";
-import { chatMessageSchema } from "../schemas/document.schema.js";
 import { ragChat } from "../services/rag.service.js";
 import { Conversation } from "../models/Conversation.js";
 
@@ -10,13 +10,25 @@ const router = Router();
 router.post("/", authenticate, async (req: Request, res: Response) => {
   console.log("[Chat] Request received:", { userId: req.userId, body: req.body });
   try {
-    const parsed = chatMessageSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.errors[0].message });
+    // useChat() sends { messages: [...], documentIds, conversationId }
+    // Extract the last user message from the messages array
+    const { messages: chatMessages, documentIds, conversationId } = req.body;
+
+    const lastUserMessage = chatMessages?.filter((m: { role: string }) => m.role === "user").pop();
+    const message = lastUserMessage?.content;
+
+    if (!message || typeof message !== "string" || message.length === 0) {
+      res.status(400).json({ error: "Message cannot be empty" });
       return;
     }
-
-    const { message, documentIds, conversationId } = parsed.data;
+    if (message.length > 4000) {
+      res.status(400).json({ error: "Message too long" });
+      return;
+    }
+    if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
+      res.status(400).json({ error: "Select at least one document" });
+      return;
+    }
 
     const result = await ragChat({
       userId: req.userId!,
@@ -25,14 +37,43 @@ router.post("/", authenticate, async (req: Request, res: Response) => {
       conversationId,
     });
 
-    // Set headers for streaming + metadata
-    res.setHeader("x-conversation-id", result.conversationId);
-    res.setHeader("x-trace-id", result.traceId);
-    // Encode sources as base64 to avoid invalid header characters
-    res.setHeader("x-sources", Buffer.from(JSON.stringify(result.sources)).toString("base64"));
+    // Use createDataStreamResponse to send stream + metadata annotations
+    const response = createDataStreamResponse({
+      execute: async (dataStream) => {
+        // Send metadata as data stream annotations
+        dataStream.writeMessageAnnotation({
+          conversationId: result.conversationId,
+          traceId: result.traceId,
+          sources: result.sources,
+        });
 
-    // Pipe the AI SDK stream to the response
-    result.stream.pipeDataStreamToResponse(res);
+        // Merge the LLM stream into the data stream
+        result.stream.mergeIntoDataStream(dataStream);
+      },
+    });
+
+    // Pipe the Web Response to Express
+    const webResponse = response as unknown as globalThis.Response;
+    res.status(webResponse.status);
+    webResponse.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
+    const body = webResponse.body;
+    if (body) {
+      const reader = body.getReader();
+      const pump = async (): Promise<void> => {
+        const { done, value } = await reader.read();
+        if (done) {
+          res.end();
+          return;
+        }
+        res.write(value);
+        return pump();
+      };
+      await pump();
+    } else {
+      res.end();
+    }
   } catch (error) {
     console.error("Chat error:", error instanceof Error ? error.stack : error);
     if (!res.headersSent) {

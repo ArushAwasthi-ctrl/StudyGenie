@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useChat } from "ai/react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Send,
@@ -24,12 +25,6 @@ interface Source {
   text: string;
 }
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-  sources?: Source[];
-}
-
 const API_BASE = import.meta.env.PROD
   ? "/api"
   : (import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : "/api");
@@ -37,14 +32,45 @@ const API_BASE = import.meta.env.PROD
 export default function ChatPage() {
   const { documents, isLoading: docsLoading } = useDocuments();
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [showDocPicker, setShowDocPicker] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [sources, setSources] = useState<Record<string, Source[]>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const {
+    messages,
+    input,
+    setInput,
+    handleSubmit: submitChat,
+    isLoading: isStreaming,
+    error,
+    setMessages,
+  } = useChat({
+    api: `${API_BASE}/chat`,
+    credentials: "include",
+    body: {
+      documentIds: selectedDocs,
+      conversationId,
+    },
+    onFinish: (message) => {
+      // Extract sources from message annotations
+      const annotations = message.annotations as Array<{
+        conversationId?: string;
+        traceId?: string;
+        sources?: Source[];
+      }> | undefined;
+
+      if (annotations && annotations.length > 0) {
+        const annotation = annotations[0];
+        if (annotation.conversationId) {
+          setConversationId(annotation.conversationId);
+        }
+        if (annotation.sources && annotation.sources.length > 0) {
+          setSources((prev) => ({ ...prev, [message.id]: annotation.sources! }));
+        }
+      }
+    },
+  });
 
   const readyDocs = documents.filter((d: Document) => d.status === "ready");
 
@@ -62,120 +88,23 @@ export default function ChatPage() {
     );
   };
 
-  const handleSubmit = async () => {
-    const trimmed = input.trim();
-    if (!trimmed || selectedDocs.length === 0 || isStreaming) return;
-
-    setError(null);
-    const userMessage: Message = { role: "user", content: trimmed };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsStreaming(true);
-
-    // Add placeholder for assistant
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-
-    try {
-      const res = await fetch(`${API_BASE}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          message: trimmed,
-          documentIds: selectedDocs,
-          conversationId,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({ error: "Chat failed" }));
-        throw new Error(errData.error || `HTTP ${res.status}`);
-      }
-
-      // Read conversation ID from headers
-      const newConvId = res.headers.get("x-conversation-id");
-      if (newConvId) setConversationId(newConvId);
-
-      // Parse sources from headers
-      let sources: Source[] = [];
-      try {
-        const sourcesHeader = res.headers.get("x-sources");
-        if (sourcesHeader) sources = JSON.parse(atob(sourcesHeader));
-      } catch {
-        // ignore parse errors
-      }
-
-      // Stream the response
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) throw new Error("No response body");
-
-      let fullText = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        // AI SDK data stream protocol: text deltas are prefixed with 0:
-        const lines = chunk.split("\n");
-        for (const line of lines) {
-          if (line.startsWith("0:")) {
-            try {
-              const text = JSON.parse(line.slice(2));
-              fullText += text;
-              setMessages((prev) => {
-                const updated = [...prev];
-                updated[updated.length - 1] = {
-                  role: "assistant",
-                  content: fullText,
-                  sources,
-                };
-                return updated;
-              });
-            } catch {
-              // Skip non-JSON lines
-            }
-          }
-        }
-      }
-
-      // Final update with sources
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          role: "assistant",
-          content: fullText,
-          sources,
-        };
-        return updated;
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Chat failed");
-      // Remove empty assistant message on error
-      setMessages((prev) => {
-        if (prev[prev.length - 1]?.content === "") {
-          return prev.slice(0, -1);
-        }
-        return prev;
-      });
-    } finally {
-      setIsStreaming(false);
-    }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || selectedDocs.length === 0 || isStreaming) return;
+    submitChat(e);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      handleSubmit(e as unknown as React.FormEvent);
     }
   };
 
   const startNewChat = () => {
     setMessages([]);
     setConversationId(null);
-    setError(null);
+    setSources({});
   };
 
   // No documents uploaded
@@ -290,71 +219,74 @@ export default function ChatPage() {
         )}
 
         <AnimatePresence mode="popLayout">
-          {messages.map((msg, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
-            >
-              {msg.role === "assistant" && (
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-              )}
-
-              <div
-                className={`max-w-[75%] ${
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2.5"
-                    : "space-y-2"
-                }`}
+          {messages.map((msg, i) => {
+            const msgSources = sources[msg.id] || [];
+            return (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className={`flex gap-3 ${msg.role === "user" ? "justify-end" : ""}`}
               >
-                {msg.role === "user" ? (
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                ) : (
-                  <>
-                    <Card className="border-0 shadow-none bg-transparent">
-                      <CardContent className="p-0">
-                        <div className="text-sm whitespace-pre-wrap">
-                          {msg.content}
-                          {isStreaming && i === messages.length - 1 && (
-                            <span className="inline-block w-1.5 h-4 bg-primary ml-0.5 animate-pulse" />
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Sources */}
-                    {msg.sources && msg.sources.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {msg.sources.map((src, j) => (
-                          <Badge
-                            key={j}
-                            variant="outline"
-                            className="text-xs gap-1 font-normal"
-                          >
-                            <FileText className="h-3 w-3" />
-                            {src.filename} #{src.chunkIndex}
-                            <span className="text-muted-foreground">
-                              {(src.score * 100).toFixed(0)}%
-                            </span>
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </>
+                {msg.role === "assistant" && (
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
                 )}
-              </div>
 
-              {msg.role === "user" && (
-                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-1">
-                  <User className="h-4 w-4" />
+                <div
+                  className={`max-w-[75%] ${
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2.5"
+                      : "space-y-2"
+                  }`}
+                >
+                  {msg.role === "user" ? (
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  ) : (
+                    <>
+                      <Card className="border-0 shadow-none bg-transparent">
+                        <CardContent className="p-0">
+                          <div className="text-sm whitespace-pre-wrap">
+                            {msg.content}
+                            {isStreaming && i === messages.length - 1 && (
+                              <span className="inline-block w-1.5 h-4 bg-primary ml-0.5 animate-pulse" />
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Sources */}
+                      {msgSources.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {msgSources.map((src, j) => (
+                            <Badge
+                              key={j}
+                              variant="outline"
+                              className="text-xs gap-1 font-normal"
+                            >
+                              <FileText className="h-3 w-3" />
+                              {src.filename} #{src.chunkIndex}
+                              <span className="text-muted-foreground">
+                                {(src.score * 100).toFixed(0)}%
+                              </span>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
-            </motion.div>
-          ))}
+
+                {msg.role === "user" && (
+                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0 mt-1">
+                    <User className="h-4 w-4" />
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
 
         <div ref={messagesEndRef} />
@@ -363,15 +295,14 @@ export default function ChatPage() {
       {/* Error */}
       {error && (
         <div className="px-4 py-2 text-sm text-destructive flex items-center gap-2 border-t">
-          {error}
+          {error.message}
         </div>
       )}
 
       {/* Input */}
-      <div className="border-t p-4 shrink-0">
+      <form onSubmit={handleSubmit} className="border-t p-4 shrink-0">
         <div className="flex gap-2 max-w-3xl mx-auto">
           <Textarea
-            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -381,11 +312,11 @@ export default function ChatPage() {
                 : "Ask about your documents..."
             }
             disabled={selectedDocs.length === 0 || isStreaming}
-            className="min-h-[44px] max-h-32 resize-none"
+            className="min-h-11 max-h-32 resize-none"
             rows={1}
           />
           <Button
-            onClick={handleSubmit}
+            type="submit"
             disabled={!input.trim() || selectedDocs.length === 0 || isStreaming}
             size="icon"
             className="shrink-0 h-11 w-11"
@@ -397,7 +328,7 @@ export default function ChatPage() {
             )}
           </Button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
