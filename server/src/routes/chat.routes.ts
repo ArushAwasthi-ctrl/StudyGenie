@@ -15,7 +15,14 @@ router.post("/", authenticate, async (req: Request, res: Response) => {
     const { messages: chatMessages, documentIds, conversationId } = req.body;
 
     const lastUserMessage = chatMessages?.filter((m: { role: string }) => m.role === "user").pop();
-    const message = lastUserMessage?.content;
+    const messageFromParts = lastUserMessage?.parts
+      ?.filter((p: { type: string }) => p.type === "text")
+      .map((p: { text: string }) => p.text)
+      .join("\n");
+    const message: string | undefined =
+      typeof lastUserMessage?.content === "string" && lastUserMessage.content.length > 0
+        ? lastUserMessage.content
+        : messageFromParts;
 
     if (!message || typeof message !== "string" || message.length === 0) {
       res.status(400).json({ error: "Message cannot be empty" });
