@@ -48,10 +48,11 @@ export default function ChatPage() {
   } = useChat({
     api: `${API_BASE}/chat`,
     credentials: "include",
-    body: {
+    experimental_prepareRequestBody: ({ messages }) => ({
+      messages,
       documentIds: selectedDocs,
       conversationId,
-    },
+    }),
     onFinish: (message) => {
       // Extract sources from message annotations
       const annotations = message.annotations as Array<{
