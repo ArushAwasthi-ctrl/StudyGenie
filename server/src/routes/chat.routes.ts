@@ -10,9 +10,10 @@ const router = Router();
 router.post("/", authenticate, async (req: Request, res: Response) => {
   console.log("[Chat] Request received:", { userId: req.userId, body: req.body });
   try {
-    // useChat() sends { messages: [...], documentIds, conversationId }
-    // Extract the last user message from the messages array
-    const { messages: chatMessages, documentIds, conversationId } = req.body;
+    // Accept BOTH client shapes:
+    //   pre-useChat:  { message: string,        documentIds, conversationId }
+    //   useChat v4:   { messages: UIMessage[],  documentIds, conversationId }
+    const { messages: chatMessages, message: singleMessage, documentIds, conversationId } = req.body;
 
     const lastUserMessage = chatMessages?.filter((m: { role: string }) => m.role === "user").pop();
     const messageFromParts = lastUserMessage?.parts
@@ -20,9 +21,11 @@ router.post("/", authenticate, async (req: Request, res: Response) => {
       .map((p: { text: string }) => p.text)
       .join("\n");
     const message: string | undefined =
-      typeof lastUserMessage?.content === "string" && lastUserMessage.content.length > 0
-        ? lastUserMessage.content
-        : messageFromParts;
+      typeof singleMessage === "string" && singleMessage.length > 0
+        ? singleMessage
+        : typeof lastUserMessage?.content === "string" && lastUserMessage.content.length > 0
+          ? lastUserMessage.content
+          : messageFromParts;
 
     if (!message || typeof message !== "string" || message.length === 0) {
       res.status(400).json({ error: "Message cannot be empty" });
